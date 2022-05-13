@@ -3,13 +3,14 @@ import torch
 
 
 class Generator(nn.Module):
-    def __init__(self, n_res_blocks=8):
+    def __init__(self, n_res_blocks=4):
         super(Generator, self).__init__()
         self.block_input = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
             nn.PReLU()
         )
-        self.res_blocks = nn.ModuleList([ResidualBlock(64) for _ in range(n_res_blocks)])
+        self.res_blocks = nn.ModuleList(
+            [ResidualBlock(64) for _ in range(n_res_blocks)])
         self.block_output = nn.Conv2d(64, 3, kernel_size=3, padding=1)
 
     def forward(self, x):
@@ -91,7 +92,8 @@ class GaussianFilter(nn.Module):
         xy_grid = torch.stack([x_grid, y_grid], dim=-1).float()
 
         # Calculate the 2-dimensional gaussian kernel
-        gaussian_kernel = torch.exp(-torch.sum((xy_grid - mean) ** 2., dim=-1) / (2 * variance))
+        gaussian_kernel = torch.exp(-torch.sum((xy_grid - mean)
+                                    ** 2., dim=-1) / (2 * variance))
 
         # Make sure sum of values in gaussian kernel equals 1.
         gaussian_kernel = gaussian_kernel / torch.sum(gaussian_kernel)
@@ -101,7 +103,8 @@ class GaussianFilter(nn.Module):
         gaussian_kernel = gaussian_kernel.repeat(3, 1, 1, 1)
 
         # create gaussian filter as convolutional layer
-        self.gaussian_filter = nn.Conv2d(3, 3, kernel_size, stride=stride, padding=padding, groups=3, bias=False)
+        self.gaussian_filter = nn.Conv2d(
+            3, 3, kernel_size, stride=stride, padding=padding, groups=3, bias=False)
         self.gaussian_filter.weight.data = gaussian_kernel
         self.gaussian_filter.weight.requires_grad = False
 
@@ -117,9 +120,11 @@ class FilterLow(nn.Module):
         else:
             pad = 0
         if gaussian:
-            self.filter = GaussianFilter(kernel_size=kernel_size, stride=stride, padding=pad)
+            self.filter = GaussianFilter(
+                kernel_size=kernel_size, stride=stride, padding=pad)
         else:
-            self.filter = nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=pad, count_include_pad=include_pad)
+            self.filter = nn.AvgPool2d(
+                kernel_size=kernel_size, stride=stride, padding=pad, count_include_pad=include_pad)
         self.recursions = recursions
 
     def forward(self, img):

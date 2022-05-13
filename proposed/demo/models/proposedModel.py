@@ -123,6 +123,7 @@ class ResCNet(nn.Module):
     Residual Convolutional Net
     """
 
+    # we changed the number of residual blocks to 12 from 16
     def __init__(self, depth=12, color=False, weightnorm=True):
         self.inplanes = 64
         super(ResCNet, self).__init__()

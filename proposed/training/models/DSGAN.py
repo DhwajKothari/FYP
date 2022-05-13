@@ -3,11 +3,12 @@ import torch
 
 
 class Generator(nn.Module):
+    # changed number of residual blocks to 4 from 8 in DS generator
     def __init__(self, n_res_blocks=4):
         super(Generator, self).__init__()
         self.block_input = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
-            nn.PReLU()
+            nn.PReLU()  # we added PReLU instead of LeakyReLu
         )
         self.res_blocks = nn.ModuleList(
             [ResidualBlock(64) for _ in range(n_res_blocks)])

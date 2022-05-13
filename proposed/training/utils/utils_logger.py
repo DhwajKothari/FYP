@@ -7,18 +7,7 @@ import logging
 def log(*args, **kwargs):
     print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:"), *args, **kwargs)
 
-
-'''
-# ===============================
-# logger
-# logger_name = None = 'base' ???
-# ===============================
-'''
-
-
 def logger_info(logger_name, log_path='default_logger.log'):
-    ''' set up logger
-    '''
     log = logging.getLogger(logger_name)
     if log.hasHandlers():
         print('LogHandlers exists!')
@@ -30,18 +19,11 @@ def logger_info(logger_name, log_path='default_logger.log'):
         fh.setFormatter(formatter)
         log.setLevel(level)
         log.addHandler(fh)
-        # print(len(log.handlers))
 
         sh = logging.StreamHandler()
         sh.setFormatter(formatter)
         log.addHandler(sh)
 
-
-'''
-# ===============================
-# print to file and std_out simultaneously
-# ===============================
-'''
 
 
 class logger_print(object):
@@ -56,11 +38,6 @@ class logger_print(object):
     def flush(self):
         pass
     
-'''
-# ===============================
-# timer class
-# ===============================
-'''
 
 class timer():
     def __init__(self):

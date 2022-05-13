@@ -7,10 +7,6 @@ from data_loader import common
 import random
 
 class LRHRDataset(Dataset):
-    '''
-    Dataset for LR and HR images.
-    '''
-
     def __init__(self, dataroot, is_train, scale, patch_size, rgb_range, noise_std):
         super(LRHRDataset, self).__init__()
 
@@ -28,7 +24,6 @@ class LRHRDataset(Dataset):
             self.dataroot_hr = dataroot+'DF2K/generated/HR/'
             self.dataroot_lr = dataroot+'DF2K/generated/LR/'
             
-            # read image list from image/binary files
             self.paths_imgs_hr = common.get_image_paths("img", self.dataroot_hr)
             self.paths_imgs_lr = common.get_image_paths("img", self.dataroot_lr)
             
@@ -45,7 +40,6 @@ class LRHRDataset(Dataset):
             HR_list = dataroot_HR +  self.paths_imgs_hr
             LR_list = dataroot_LR + self.paths_imgs_lr
         
-        # change the length of train dataset (influence the number of iterations in each epoch)
         self.repeat = 3
         
         self.paths_HR = HR_list
@@ -97,7 +91,6 @@ class LRHRDataset(Dataset):
         noise = 'G' + str(sigma)
         if self.train:
             LR_size = self.patch_size
-            # random crop and augment
             lr, hr = common.get_patch(
                 lr, hr, LR_size, self.scale)
             lr, hr = common.augment([lr, hr])
@@ -109,7 +102,6 @@ class LRHRDataset(Dataset):
     
 def imshow(img):
     npimg = img.numpy()
-    #print('npimg:', npimg.shape)
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 if __name__ == '__main__':
@@ -144,7 +136,6 @@ if __name__ == '__main__':
             print('GTs:', x.shape, x.min(), x.max())
             print('Input:', y.shape, y.min(), y.max())
             print('Sigma:', sigma)
-            #print('lam:', lam)
             print('HR_path:', x_path)
             print('LR_path:', y_path)
         

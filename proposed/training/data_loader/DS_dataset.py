@@ -16,13 +16,11 @@ import matplotlib.pyplot as plt
 class TrainDataset(Dataset):
     def __init__(self, noisy_dir, crop_size, upscale_factor=4, cropped=False, flips=False, rotations=False, **kwargs):
         super(TrainDataset, self).__init__()
-        # get all directories used for training
         if isinstance(noisy_dir, str):
             noisy_dir = [noisy_dir]
         self.files = []
         for n_dir in noisy_dir:
             self.files += [join(n_dir, x) for x in listdir(n_dir) if utils.is_image_file(x)]
-        # intitialize image transformations and variables
         self.input_transform = T.Compose([
             T.RandomVerticalFlip(0.5 if flips else 0.0),
             T.RandomHorizontalFlip(0.5 if flips else 0.0),
@@ -35,7 +33,6 @@ class TrainDataset(Dataset):
         self.repeat = 3
 
     def __getitem__(self, idx):
-        # get downscaled and cropped image (if necessary)
         idx = self._get_index(idx)
         noisy_image = self.input_transform(Image.open(self.files[idx]))
         if self.rotations:
@@ -69,7 +66,6 @@ class DiscDataset(Dataset):
         self.rotations = rotations
 
     def __getitem__(self, index):
-        # get real image for discriminator (same as cropped in TrainDataset)
         image = self.input_transform(Image.open(self.files[index]))
         if self.rotations:
             angle = random.choice([0, 90, 180, 270])
@@ -92,7 +88,6 @@ class ValDataset(Dataset):
             self.lr_files = [join(lr_dir, x) for x in listdir(lr_dir) if utils.is_image_file(x)]
 
     def __getitem__(self, index):
-        # get downscaled, cropped and gt (if available) image
         hr_image = Image.open(self.hr_files[index])
         w, h = hr_image.size
         cs = utils.calculate_valid_crop_size(min(w, h), self.upscale_factor)
@@ -114,7 +109,6 @@ class ValDataset(Dataset):
 
 def imshow(img):
     npimg = img.numpy()
-    #print('npimg:', npimg.shape)
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 if __name__=='__main__':
@@ -155,7 +149,6 @@ if __name__=='__main__':
             print('target:', input_img.shape, input_img.min(), input_img.max())
             print('source:', disc_img.shape, disc_img.min(), disc_img.max())
         
-            # show images
             plt.figure()
             imshow(torchvision.utils.make_grid(input_img))
             plt.figure()

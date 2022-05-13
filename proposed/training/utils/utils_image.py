@@ -6,15 +6,7 @@ import torch
 import cv2
 from torchvision.utils import make_grid
 from datetime import datetime
-# import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
-
-'''
-modified by Kai Zhang (github: https://github.com/cszn)
-03/03/2019
-https://github.com/twhui/SRGAN-pyTorch
-https://github.com/xinntao/BasicSR
-'''
 
 IMG_EXTENSIONS = ['.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP']
 
@@ -37,12 +29,6 @@ def imshow(x, title=None, cbar=False, figsize=None):
     plt.show()
 
 
-'''
-# =======================================
-# get image pathes of files
-# =======================================
-'''
-
 
 def get_image_paths(dataroot):
     paths = None  # return None if dataroot is None
@@ -61,13 +47,6 @@ def _get_paths_from_images(path):
                 images.append(img_path)
     assert images, '{:s} has no valid image file'.format(path)
     return images
-
-
-'''
-# =======================================
-# makedir
-# =======================================
-'''
 
 
 def mkdir(path):
@@ -90,38 +69,16 @@ def mkdir_and_rename(path):
         os.rename(path, new_name)
     os.makedirs(path)
 
-
-'''
-# =======================================
-# read image from path
-# Note: opencv is fast
-# but read BGR numpy image
-# =======================================
-'''
-
-
-# ----------------------------------------
-# get single image of size HxWxn_channles (BGR)
-# ----------------------------------------
 def read_img(path):
-    # read image by cv2
-    # return: Numpy float32, HWC, BGR, [0,1]
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)  # cv2.IMREAD_GRAYSCALE
     img = img.astype(np.float32) / 255.
     if img.ndim == 2:
         img = np.expand_dims(img, axis=2)
-    # some images have 4 channels
     if img.shape[2] > 3:
         img = img[:, :, :3]
     return img
 
-
-# ----------------------------------------
-# get uint8 image of size HxWxn_channles (RGB)
-# ----------------------------------------
 def imread_uint(path, n_channels=3):
-    #  input: path
-    # output: HxWx3(RGB or GGG), or HxWx1 (G)
     if n_channels == 1:
         img = cv2.imread(path, 0)  # cv2.IMREAD_GRAYSCALE
         img = np.expand_dims(img, axis=2)  # HxWx1
@@ -138,21 +95,6 @@ def imsave(img, img_path):
     if img.ndim == 3:
         img = img[:, :, [2, 1, 0]]
     cv2.imwrite(img_path, img)
-
-
-'''
-# =======================================
-# numpy(single) <--->  numpy(unit)
-# numpy(single) <--->  tensor
-# numpy(unit)   <--->  tensor
-# =======================================
-'''
-
-
-# --------------------------------
-# numpy(single) <--->  numpy(unit)
-# --------------------------------
-
 
 def unit2single(img):
 
@@ -173,52 +115,28 @@ def single2uint16(img):
 
     return np.uint8((img*65535.).round())
 
-
-# --------------------------------
-# numpy(unit) <--->  tensor
-# uint (HxWxn_channels (RGB) or G)
-# --------------------------------
-
-
-# convert uint (HxWxn_channels) to 4-dimensional torch tensor
 def uint2tensor4(img):
     if img.ndim == 2:
         img = np.expand_dims(img, axis=2)
     return torch.from_numpy(np.ascontiguousarray(img)).permute(2, 0, 1).float().div(255.).unsqueeze(0)
 
-
-# convert uint (HxWxn_channels) to 3-dimensional torch tensor
 def uint2tensor3(img):
     if img.ndim == 2:
         img = np.expand_dims(img, axis=2)
     return torch.from_numpy(np.ascontiguousarray(img)).permute(2, 0, 1).float().div(255.)
 
-
-# convert torch tensor to uint
 def tensor2uint(img):
     img = img.data.squeeze().float().clamp_(0, 1).cpu().numpy()
     if img.ndim == 3:
         img = np.transpose(img, (1, 2, 0))
     return np.uint8((img*255.0).round())
 
-
-# --------------------------------
-# numpy(single) <--->  tensor
-# single (HxWxn_channels (RGB) or G)
-# --------------------------------
-
-
-# convert single (HxWxn_channels) to 4-dimensional torch tensor
 def single2tensor4(img):
     return torch.from_numpy(np.ascontiguousarray(img)).permute(2, 0, 1).float().unsqueeze(0)
 
-
-# convert single (HxWxn_channels) to 3-dimensional torch tensor
 def single2tensor3(img):
     return torch.from_numpy(np.ascontiguousarray(img)).permute(2, 0, 1).float()
 
-
-# convert torch tensor to single
 def tensor2single(img):
     img = img.data.squeeze().float().clamp_(0, 1).cpu().numpy()
     if img.ndim == 3:
@@ -234,14 +152,7 @@ def tensor2single3(img):
         img = np.expand_dims(img, axis=2)
     return img
 
-
-# from skimage.io import imread, imsave
 def tensor2img(tensor, out_type=np.uint8, min_max=(0, 1)):
-    '''
-    Converts a torch Tensor into an image Numpy array of BGR channel order
-    Input: 4D(B,(3/1),H,W), 3D(C,H,W), or 2D(H,W), any range, RGB channel order
-    Output: 3D(H,W,C) or 2D(H,W), [0,255], np.uint8 (default)
-    '''
     tensor = tensor.squeeze().float().cpu().clamp_(*min_max)  # squeeze first, then clamp
     tensor = (tensor - min_max[0]) / (min_max[1] - min_max[0])  # to range [0,1]
     n_dim = tensor.dim()
@@ -259,16 +170,7 @@ def tensor2img(tensor, out_type=np.uint8, min_max=(0, 1)):
             'Only support 4D, 3D and 2D tensor. But received with dimension: {:d}'.format(n_dim))
     if out_type == np.uint8:
         img_np = (img_np * 255.0).round()
-        # Important. Unlike matlab, numpy.unit8() WILL NOT round by default.
     return img_np.astype(out_type)
-
-
-'''
-# =======================================
-# image processing process on numpy image
-# augment(img_list, hflip=True, rot=True):
-# =======================================
-'''
 
 
 def augment_img(img, mode=0):
@@ -370,7 +272,6 @@ def inv_augment_img_tensor(img, mode=0):
 
 
 def augment_imgs(img_list, hflip=True, rot=True):
-    # horizontal flip OR rotate
     hflip = hflip and random.random() < 0.5
     vflip = rot and random.random() < 0.5
     rot90 = rot and random.random() < 0.5
@@ -387,30 +288,11 @@ def augment_imgs(img_list, hflip=True, rot=True):
     return [_augment(img) for img in img_list]
 
 
-'''
-# =======================================
-# image processing process on numpy image
-# channel_convert(in_c, tar_type, img_list):
-# rgb2ycbcr(img, only_y=True):
-# bgr2ycbcr(img, only_y=True):
-# ycbcr2rgb(img):
-# modcrop(img_in, scale):
-# =======================================
-'''
-
-
 def rgb2ycbcr(img, only_y=True):
-    '''same as matlab rgb2ycbcr
-    only_y: only return Y channel
-    Input:
-        uint8, [0, 255]
-        float, [0, 1]
-    '''
     in_img_type = img.dtype
     img.astype(np.float32)
     if in_img_type != np.uint8:
         img *= 255.
-    # convert
     if only_y:
         rlt = np.dot(img, [65.481, 128.553, 24.966]) / 255.0 + 16.0
     else:
@@ -424,16 +306,10 @@ def rgb2ycbcr(img, only_y=True):
 
 
 def ycbcr2rgb(img):
-    '''same as matlab ycbcr2rgb
-    Input:
-        uint8, [0, 255]
-        float, [0, 1]
-    '''
     in_img_type = img.dtype
     img.astype(np.float32)
     if in_img_type != np.uint8:
         img *= 255.
-    # convert
     rlt = np.matmul(img, [[0.00456621, 0.00456621, 0.00456621], [0, -0.00153632, 0.00791071],
                           [0.00625893, -0.00318811, 0]]) * 255.0 + [-222.921, 135.576, -276.836]
     if in_img_type == np.uint8:
@@ -444,12 +320,6 @@ def ycbcr2rgb(img):
 
 
 def bgr2ycbcr(img, only_y=True):
-    '''bgr version of rgb2ycbcr
-    only_y: only return Y channel
-    Input:
-        uint8, [0, 255]
-        float, [0, 1]
-    '''
     in_img_type = img.dtype
     img.astype(np.float32)
     if in_img_type != np.uint8:
@@ -468,7 +338,6 @@ def bgr2ycbcr(img, only_y=True):
 
 
 def modcrop_np(img_in, scale):
-    # img_in: Numpy, HWC or HW
     img = np.copy(img_in)
     if img.ndim == 2:
         H, W = img.shape
@@ -483,14 +352,12 @@ def modcrop_np(img_in, scale):
     return img
 
 def modcrop(img, scale):
-    # img: Pytorch, C*H*W 
     C, H, W = img.shape
     H_r, W_r = H % scale, W % scale
     img = img[:, :H - H_r, :W - W_r]
     return img
 
 def shave(img_in, border=0):
-    # img_in: Numpy, HWC or HW
     img = np.copy(img_in)
     h, w = img.shape[:2]
     img = img[border:h-border, border:w-border]
@@ -498,7 +365,6 @@ def shave(img_in, border=0):
 
 
 def channel_convert(in_c, tar_type, img_list):
-    # conversion among BGR, gray and y
     if in_c == 3 and tar_type == 'gray':  # BGR to gray
         gray_list = [cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) for img in img_list]
         return [np.expand_dims(img, axis=2) for img in gray_list]
@@ -510,17 +376,6 @@ def channel_convert(in_c, tar_type, img_list):
     else:
         return img_list
 
-
-'''
-# =======================================
-# metric, PSNR and SSIM
-# =======================================
-'''
-
-
-# ----------
-# PSNR
-# ----------
 def calculate_psnr(img1, img2, border=0):
     # img1 and img2 have range [0, 255]
     if not img1.shape == img2.shape:
@@ -536,15 +391,7 @@ def calculate_psnr(img1, img2, border=0):
         return float('inf')
     return 20 * math.log10(255.0 / math.sqrt(mse))
 
-
-# ----------
-# SSIM
-# ----------
 def calculate_ssim(img1, img2, border=0):
-    '''calculate SSIM
-    the same outputs as MATLAB's
-    img1, img2: [0, 255]
-    '''
     if not img1.shape == img2.shape:
         raise ValueError('Input images must have the same dimensions.')
     h, w = img1.shape[:2]
@@ -587,15 +434,6 @@ def ssim(img1, img2):
                                                             (sigma1_sq + sigma2_sq + C2))
     return ssim_map.mean()
 
-
-'''
-# =======================================
-# pytorch version of matlab imresize
-# =======================================
-'''
-
-
-# matlab 'imresize' function, now only support 'bicubic'
 def cubic(x):
     absx = torch.abs(x)
     absx2 = absx**2
@@ -606,44 +444,26 @@ def cubic(x):
 
 def calculate_weights_indices(in_length, out_length, scale, kernel, kernel_width, antialiasing):
     if (scale < 1) and (antialiasing):
-        # Use a modified kernel to simultaneously interpolate and antialias- larger kernel width
         kernel_width = kernel_width / scale
 
-    # Output-space coordinates
     x = torch.linspace(1, out_length, out_length)
 
-    # Input-space coordinates. Calculate the inverse mapping such that 0.5
-    # in output space maps to 0.5 in input space, and 0.5+scale in output
-    # space maps to 1.5 in input space.
     u = x / scale + 0.5 * (1 - 1 / scale)
 
-    # What is the left-most pixel that can be involved in the computation?
     left = torch.floor(u - kernel_width / 2)
-
-    # What is the maximum number of pixels that can be involved in the
-    # computation?  Note: it's OK to use an extra pixel here; if the
-    # corresponding weights are all zero, it will be eliminated at the end
-    # of this function.
     P = math.ceil(kernel_width) + 2
 
-    # The indices of the input pixels involved in computing the k-th output
-    # pixel are in row k of the indices matrix.
     indices = left.view(out_length, 1).expand(out_length, P) + torch.linspace(0, P - 1, P).view(
         1, P).expand(out_length, P)
 
-    # The weights used to compute the k-th output pixel are in row k of the
-    # weights matrix.
     distance_to_center = u.view(out_length, 1).expand(out_length, P) - indices
-    # apply cubic kernel
     if (scale < 1) and (antialiasing):
         weights = scale * cubic(distance_to_center * scale)
     else:
         weights = cubic(distance_to_center)
-    # Normalize the weights matrix so that each row sums to 1.
     weights_sum = torch.sum(weights, 1).view(out_length, 1)
     weights = weights / weights_sum.expand(out_length, P)
 
-    # If a column in weights is all zero, get rid of it. only consider the first and last column.
     weights_zero_tmp = torch.sum((weights == 0), 0)
     if not math.isclose(weights_zero_tmp[0], 0, rel_tol=1e-6):
         indices = indices.narrow(1, 1, P - 2)
@@ -659,13 +479,7 @@ def calculate_weights_indices(in_length, out_length, scale, kernel, kernel_width
     return weights, indices, int(sym_len_s), int(sym_len_e)
 
 
-# --------------------------------
-# imresize for tensor image
-# --------------------------------
 def imresize(img, scale, antialiasing=True):
-    # Now the scale should be the same for H and W
-    # input: img: pytorch tensor, CHW or HW [0,1]
-    # output: CHW or HW [0,1] w/o round
     need_squeeze = True if img.dim() == 2 else False
     if need_squeeze:
         img.unsqueeze_(0)
@@ -674,18 +488,10 @@ def imresize(img, scale, antialiasing=True):
     kernel_width = 4
     kernel = 'cubic'
 
-    # Return the desired dimension order for performing the resize.  The
-    # strategy is to perform the resize first along the dimension with the
-    # smallest scale factor.
-    # Now we do not support this.
-
-    # get weights and indices
     weights_H, indices_H, sym_len_Hs, sym_len_He = calculate_weights_indices(
         in_H, out_H, scale, kernel, kernel_width, antialiasing)
     weights_W, indices_W, sym_len_Ws, sym_len_We = calculate_weights_indices(
         in_W, out_W, scale, kernel, kernel_width, antialiasing)
-    # process H dimension
-    # symmetric copying
     img_aug = torch.FloatTensor(in_C, in_H + sym_len_Hs + sym_len_He, in_W)
     img_aug.narrow(1, sym_len_Hs, in_H).copy_(img)
 
@@ -706,8 +512,6 @@ def imresize(img, scale, antialiasing=True):
         for j in range(out_C):
             out_1[j, i, :] = img_aug[j, idx:idx + kernel_width, :].transpose(0, 1).mv(weights_H[i])
 
-    # process W dimension
-    # symmetric copying
     out_1_aug = torch.FloatTensor(in_C, out_H, in_W + sym_len_Ws + sym_len_We)
     out_1_aug.narrow(2, sym_len_Ws, in_W).copy_(out_1)
 
@@ -732,13 +536,7 @@ def imresize(img, scale, antialiasing=True):
     return out_2
 
 
-# --------------------------------
-# imresize for numpy image
-# --------------------------------
 def imresize_np(img, scale, antialiasing=True):
-    # Now the scale should be the same for H and W
-    # input: img: Numpy, HWC or HW [0,1]
-    # output: HWC or HW [0,1] w/o round
     img = torch.from_numpy(img)
     need_squeeze = True if img.dim() == 2 else False
     if need_squeeze:
@@ -749,18 +547,10 @@ def imresize_np(img, scale, antialiasing=True):
     kernel_width = 4
     kernel = 'cubic'
 
-    # Return the desired dimension order for performing the resize.  The
-    # strategy is to perform the resize first along the dimension with the
-    # smallest scale factor.
-    # Now we do not support this.
-
-    # get weights and indices
     weights_H, indices_H, sym_len_Hs, sym_len_He = calculate_weights_indices(
         in_H, out_H, scale, kernel, kernel_width, antialiasing)
     weights_W, indices_W, sym_len_Ws, sym_len_We = calculate_weights_indices(
         in_W, out_W, scale, kernel, kernel_width, antialiasing)
-    # process H dimension
-    # symmetric copying
     img_aug = torch.FloatTensor(in_H + sym_len_Hs + sym_len_He, in_W, in_C)
     img_aug.narrow(0, sym_len_Hs, in_H).copy_(img)
 
@@ -781,8 +571,6 @@ def imresize_np(img, scale, antialiasing=True):
         for j in range(out_C):
             out_1[i, :, j] = img_aug[idx:idx + kernel_width, :, j].transpose(0, 1).mv(weights_H[i])
 
-    # process W dimension
-    # symmetric copying
     out_1_aug = torch.FloatTensor(out_H, in_W + sym_len_Ws + sym_len_We, in_C)
     out_1_aug.narrow(1, sym_len_Ws, in_W).copy_(out_1)
 
@@ -812,18 +600,6 @@ if __name__ == '__main__':
     img = imread_uint('test.bmp',3)
     img = unit2single(img)
     sf = 3    
-#    # numpy imresize
-#    print('org img:', img.shape, img.min(), img.max())
-#    plt.figure()
-#    plt.imshow(img)
-#    
-#    lr_img = imresize_np(img, scale=1/4).clip(0,1)
-#    
-#    print('lr img:', lr_img.shape, lr_img.min(), lr_img.max())
-#    plt.figure()
-#    plt.imshow(lr_img)
-    
-    # torch imresize
     img = torch.FloatTensor(img).permute(2,0,1)
     img = modcrop(img, sf)
     

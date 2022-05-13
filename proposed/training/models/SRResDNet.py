@@ -15,25 +15,10 @@ class SRResDNet(nn.Module):
         self.bbproj = nn.Hardtanh(min_val = 0., max_val = 255.)
 
     def forward(self, input):        
-        # reconstruction block
         input = F.interpolate(input, scale_factor=self.upscale_factor, mode='bilinear', align_corners=False)
-        #print('input:', input.shape, input.min(), input.max())
-        
-        # estimate sigma 
         sigma = self.noise_estimator(input)
         sigma *= 255.
-        #print('estimated sigma:', sigma.shape, sigma)
-        
-        # model  
         output = self.model(input, sigma, self.alpha)
-        #print('output:', output.shape, output.min(), output.max())
-        
-        # residual ouput
         output = input - output
-        #print('residual output:', output.shape, output.min(), output.max())
-        
-        # clipping layer
         output = self.bbproj(output)
-        #print('clipping output:', output.shape, output.min(), output.max())
-        
         return output

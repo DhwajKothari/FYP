@@ -12,9 +12,6 @@ BINARY_EXTENSIONS = ['.npy']
 BENCHMARK = ['Set5', 'Set14', 'B100', 'Urban100', 'Manga109', 'DIV2K', 'DF2K']
 
 
-####################
-# Files & IO
-####################
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
@@ -87,8 +84,6 @@ def find_benchmark(dataroot):
 
 
 def read_img(path, data_type):
-    # read image by misc or from .npy
-    # return: Numpy float32, HWC, RGB, [0,255]
     if data_type == 'img':
         img = imageio.imread(path, pilmode='RGB')
     elif data_type.find('npy') >= 0:
@@ -101,14 +96,8 @@ def read_img(path, data_type):
     return img
 
 
-####################
-# image processing
-# process on numpy image
-####################
 def np2Tensor(l, rgb_range):
     def _np2Tensor(img):
-        # if img.shape[2] == 3: # for opencv imread
-        #     img = img[:, :, [2, 1, 0]]
         np_transpose = np.ascontiguousarray(img.transpose((2, 0, 1)))
         tensor = torch.from_numpy(np_transpose).float()
         tensor.mul_(rgb_range / 255.)
@@ -179,7 +168,6 @@ def generate_LR(x, sf):
     return lr
 
 def augment(img_list, hflip=True, rot=True):
-    # horizontal flip OR rotate
     hflip = hflip and random.random() < 0.5
     vflip = rot and random.random() < 0.5
     rot90 = rot and random.random() < 0.5

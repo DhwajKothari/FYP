@@ -52,35 +52,5 @@ for path_lr in glob.glob(test_img_folder):
     torch.cuda.empty_cache()
     ### done
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    base2 = base
-    base2 = base2.replace("lr_", "")
-    img = cv2.imread("../../../hr/"+base2+".png")
-    img = cv2.blur(img, (4,5))
-    cv2.imwrite('results/{:s}_PROPOSED.png'.format(base), img)
-    #print('results/{:s}_PROPOSED.png'.format(base))
-
-
 avg_time = sum(test_results['time']) / len(test_results['time'])
 print('Avg. Time:{:.4f}'.format(avg_time))

@@ -68,14 +68,11 @@ def generate_LR_noisy(x, nstd, sf, random_seed=20180102):
     dtype = x.dtype
     
     lr_img = utils_image.imresize(x, scale=1/sf).type(dtype)
-    #print('ds_func:', lr_img.shape, lr_img.min(), lr_img.max())
     shape = lr_img.shape
-    #noise = sigma * torch.randn(*shape, dtype=dtype)
     rng = np.random.RandomState(random_seed)
     random_noise = rng.randn(*shape)
     random_noise = torch.from_numpy(random_noise).type(dtype)
     noise = sigma * random_noise
-    #print('noise_func:', noise.shape, noise.min(), noise.max())
     LR_noisy = lr_img + noise
 
     return LR_noisy.clamp(0.,1.)
@@ -96,21 +93,15 @@ def generate_LR_blur_noisy(x, kernel, nstd, sf, same=True, random_seed=20180102)
 
     if same:
         lr_img = utils_image.imresize(x, scale=1/sf).type(dtype)
-        #print('ds_func:', lr_img.shape, lr_img.min(), lr_img.max())
         LR_blurred = utils.imfilter2D_SpatialDomain(lr_img, kernel, padType='zero', mode="conv")
-        #print('blur_func:', LR_blurred.shape, LR_blurred.min(), LR_blurred.max())
         shape = LR_blurred.shape
         noise = sigma * torch.randn(*shape, dtype=dtype)
-        #print('noise_func:', noise.shape, noise.min(), noise.max())
         LR_blurred_noisy = LR_blurred + noise
     else:
         lr_img = utils_image.imresize(x, scale=1/sf).type(dtype)
-        #print('ds_func:', lr_img.shape, lr_img.min(), lr_img.max())
         LR_blurred = utils.imfilter2D_SpatialDomain(lr_img, kernel, padType='valid', mode="conv")
-        #print('blur_func:', LR_blurred.shape, LR_blurred.min(), LR_blurred.max())
         shape = LR_blurred.shape
         noise = sigma * torch.randn(*shape, dtype=dtype)
-        #print('noise_func:', noise.shape, noise.min(), noise.max())
         LR_blurred_noisy = LR_blurred + noise
 
     return LR_blurred_noisy.clamp(0.,1.)
@@ -151,29 +142,6 @@ def psnr(xhat, x, border=0):
     loss /= N
     return loss
 
-#def psnr(xhat, x):
-#    avg_psnr = 0
-#    for i in range(xhat.size(0)):
-#        mse = torch.mean(torch.pow(xhat.data[i] - x.data[i], 2))
-#        try:
-#            avg_psnr += 10 * np.log10(255**2 / mse)
-#        except:
-#            continue
-#    return avg_psnr / x.size(0)
-
-#def modcrop(img, modulo):
-#    if len(img.shape) == 2:
-#        sz = img.shape
-#        sz = sz - np.mod(sz, modulo)
-#        img = img[0:sz[0], 0:sz[1]]
-#    else:
-#        tmpsz = img.shape
-#        sz = tmpsz[0:2]
-#        sz = sz - np.mod(sz, modulo);
-#        img = img[0:sz[0], 0:sz[1], :]
-#    
-#    return img
-
 def get_patch(img_in, img_tar, patch_size, scale):
     ih, iw = img_in.shape[:2]
     oh, ow = img_tar.shape[:2]
@@ -197,14 +165,12 @@ def get_patch(img_in, img_tar, patch_size, scale):
     return img_in, img_tar
 
 def modcrop(img, scale):
-    # img: Pytorch, C*H*W 
     C, H, W = img.shape
     H_r, W_r = H % scale, W % scale
     img = img[:, :H - H_r, :W - W_r]
     return img
 
 def modcrop_np(img_in, scale):
-    # img_in: Numpy, HWC or HW
     img = np.copy(img_in)
     if img.ndim == 2:
         H, W = img.shape
@@ -265,7 +231,6 @@ class L1GradLoss(nn.Module):
     
     def forward(self, input, target):
         err = input - target
-        #loss = err.view(-1,1).abs().sum().div(err.numel())
         loss = err.norm(p=1).div(err.numel())
         if self.grad:
             loss += utils.imGrad(err,bc='reflexive').norm(p=1).div(err.numel())
@@ -367,7 +332,6 @@ def calc_metrics(img1, img2, crop_border, test_Y):
     return psnr, ssim
     
 def calculate_psnr(img1, img2, border=0):
-    # img1 and img2 have range [0, 255]
     if not img1.shape == img2.shape:
         raise ValueError('Input images must have the same dimensions.')
     h, w = img1.shape[:2]
@@ -479,13 +443,9 @@ def loadmat(filename):
     return _check_keys(data)
 
 def load_resdnet_params(model, pretrained_model_path, depth):
-    # load the weights
     weights = loadmat(pretrained_model_path)
     state_dict = model.state_dict()
-    # load l2proj
 
-    #state_dict['l2proj.alpha'] = torch.FloatTensor([weights['net']['layers'][-4]['weights']])
-    # load conv2d and conv2dT
     state_dict['conv1.bias'] = torch.FloatTensor(np.array(weights['net']['layers'][0]['weights'][1]))
     state_dict['conv1.weight_g'] = torch.FloatTensor(np.array(weights['net']['layers'][0]['weights'][2]))[:,None,None,None]
     state_dict['conv1.weight_v'] = torch.FloatTensor(np.array(weights['net']['layers'][0]['weights'][0])).permute(3,2,1,0)
@@ -493,7 +453,6 @@ def load_resdnet_params(model, pretrained_model_path, depth):
     state_dict['conv_out.bias'] = torch.FloatTensor(np.array(weights['net']['layers'][-5]['weights'][1]))
     state_dict['conv_out.weight_g'] = torch.FloatTensor(np.array(weights['net']['layers'][-5]['weights'][2]))[:,None,None,None]
     state_dict['conv_out.weight_v'] = torch.FloatTensor(np.array(weights['net']['layers'][-5]['weights'][0])).permute(3,2,1,0)
-    # fill layers
     for i in range(depth):
         layer = [k for k in state_dict.keys() if 'layer1.'+str(i) in k]
         state_dict[layer[0]] = torch.FloatTensor(np.array(weights['net']['layers'][i+1]['weights'][1]))
@@ -504,80 +463,27 @@ def load_resdnet_params(model, pretrained_model_path, depth):
         state_dict[layer[5]] = torch.FloatTensor(np.array(weights['net']['layers'][i+1]['weights'][4]))
         state_dict[layer[6]] = torch.FloatTensor(np.array(weights['net']['layers'][i+1]['weights'][5]))[:,None,None,None]
         state_dict[layer[7]] = torch.FloatTensor(np.array(weights['net']['layers'][i+1]['weights'][3])).permute(3,2,1,0)
-        # load all weights to model
     model.load_state_dict(state_dict)
     return model
-
-#def load_resdnet_params(pretrain_path, model, depth=5):
-#    pretrain_net = torch.load(pretrain_path, map_location = lambda storage, loc:storage)
-#    states_pretrain_net = pretrain_net['model_state_dict']
-#    #print('states_pretrain_net len:', len(states_pretrain_net))
-#    #states_resdnet = [k for k in states_pretrain_net.keys()]
-#    #print('states resdnet:', states_resdnet)
-#    states_net = model.state_dict()
-#    #print('states_net len:', len(states_net))
-#    #states_srresdnet = [k for k in states_net.keys()]
-#    #print('states srresdnet:', states_srresdnet)
-#    
-#    
-#    states_net['head_conv.bias'] = states_pretrain_net['bias_f']
-#    states_net['head_conv.weight_g'] = states_pretrain_net['scale_f'][:,None,None,None]
-#    states_net['head_conv.weight_v'] = states_pretrain_net['conv_weights']
-#    states_net['tconv.bias'] = states_pretrain_net['bias_t']
-#    states_net['tconv.weight_g'] = states_pretrain_net['scale_f'][:,None,None,None]
-#    states_net['tconv.weight_v'] = states_pretrain_net['conv_weights']
-#    states_net['l2proj.alpha'] = states_pretrain_net['alpha']
-#
-#    for i in range(depth):
-#            states_resdnet = [k for k in states_pretrain_net.keys() if 'resPA.'+str(i) in k]
-#            states_srresdnet = [k for k in states_net.keys() if 'resBlocks.'+str(i) in k]
-#            #print('states_resdnet:', states_resdnet)
-#            #print('states_srresdnet:', states_srresdnet)
-#
-#            states_net[states_srresdnet[2]] = states_pretrain_net[states_resdnet[0]]
-#            states_net[states_srresdnet[6]] = states_pretrain_net[states_resdnet[1]] 
-#            states_net[states_srresdnet[1]] = states_pretrain_net[states_resdnet[2]][:,None,None,None] 
-#            states_net[states_srresdnet[5]] = states_pretrain_net[states_resdnet[3]][:,None,None,None] 
-#            states_net[states_srresdnet[0]] = states_pretrain_net[states_resdnet[4]] 
-#            states_net[states_srresdnet[4]] = states_pretrain_net[states_resdnet[5]] 
-#            states_net[states_srresdnet[3]] = states_pretrain_net[states_resdnet[6]] 
-#            states_net[states_srresdnet[7]] = states_pretrain_net[states_resdnet[7]]
-#    
-#    model.load_state_dict(states_net)
-#    return model
 
 def load_srresdnet_params(pretrain_path, model, res_depth=8, upsamp_depth=1):
     pretrain_net = torch.load(pretrain_path, map_location = lambda storage, loc:storage)
     states_pretrain_net = pretrain_net['model_state_dict']
-#    print('states_pretrain_net len:', len(states_pretrain_net))
-#    states_srresdnet = [k for k in states_pretrain_net.keys()]
-#    print('states srresdnet:', states_srresdnet)
     states_net = model.state_dict()
-#    print('states_net len:', len(states_net))
-#    states_srwdnet = [k for k in states_net.keys()]
-#    print('states srresdnet:', states_srwdnet)
-    
-    # head_conv
     states_net['head_conv.bias'] = states_pretrain_net['head_conv.bias']
     states_net['head_conv.weight_g'] = states_pretrain_net['head_conv.weight_g']
     states_net['head_conv.weight_v'] = states_pretrain_net['head_conv.weight_v']
-    # tconv
     states_net['tconv.bias'] = states_pretrain_net['tconv.bias']
     states_net['tconv.weight_g'] = states_pretrain_net['tconv.weight_g']
     states_net['tconv.weight_v'] = states_pretrain_net['tconv.weight_v']
-    # tail_conv
     states_net['tail_conv.bias'] = states_pretrain_net['tail_conv.bias']
     states_net['tail_conv.weight_g'] = states_pretrain_net['tail_conv.weight_g']
     states_net['tail_conv.weight_v'] = states_pretrain_net['tail_conv.weight_v']
-    # proj alpha
     states_net['l2proj.alpha'] = states_pretrain_net['l2proj.alpha']
 
     for i in range(res_depth):
             states_srresdnet = [k for k in states_pretrain_net.keys() if 'resBlocks.'+str(i) in k]
             states_srwdnet = [k for k in states_net.keys() if 'resBlocks.'+str(i) in k]
-            #print('states_srresdnet:', states_srresdnet)
-            #print('states_srwdnet:', states_srwdnet)
-
             states_net[states_srwdnet[0]] = states_pretrain_net[states_srresdnet[0]]
             states_net[states_srwdnet[1]] = states_pretrain_net[states_srresdnet[1]] 
             states_net[states_srwdnet[2]] = states_pretrain_net[states_srresdnet[2]]
@@ -590,9 +496,6 @@ def load_srresdnet_params(pretrain_path, model, res_depth=8, upsamp_depth=1):
     for i in range(upsamp_depth):
             states_srresdnet = [k for k in states_pretrain_net.keys() if 'upsampling.upsampling.'+str(i) in k]
             states_srwdnet = [k for k in states_net.keys() if 'upsampling.upsampling.'+str(i) in k]
-            #print('states_srresdnet:', states_srresdnet)
-            #print('states_srwdnet:', states_srwdnet)
-
             states_net[states_srwdnet[0]] = states_pretrain_net[states_srresdnet[0]]
             states_net[states_srwdnet[1]] = states_pretrain_net[states_srresdnet[1]] 
             states_net[states_srwdnet[2]] = states_pretrain_net[states_srresdnet[2]]
